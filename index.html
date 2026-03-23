@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event Lucky Draw Picker</title>
+<style>
+:root {
+  --bg1:#0b2740; --bg2:#184d78; --panel:#09121bdd; --line:#35556f;
+  --text:#eef7ff; --muted:#bdd0de; --gold:#ffd166;
+}
+* { box-sizing:border-box; }
+body {
+  margin:0; color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Arial,sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(63,184,255,.18), transparent 24%),
+    radial-gradient(circle at top right, rgba(116,255,211,.12), transparent 18%),
+    linear-gradient(135deg, var(--bg1), var(--bg2));
+  min-height:100vh;
+}
+.wrap { max-width:1450px; margin:0 auto; padding:18px; }
+.topbar { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+.brand { display:flex; align-items:center; gap:16px; }
+.brand img, .brand-mark { height:74px; width:auto; border-radius:10px; background:white; box-shadow:0 10px 26px rgba(0,0,0,.18); }
+.brand-mark { min-width:74px; display:grid; place-items:center; color:#0b2740; font-weight:900; font-size:28px; padding:0 16px; }
+.brand h1 { margin:0; font-size:32px; font-weight:900; letter-spacing:-.02em; }
+.brand p { margin:6px 0 0; color:var(--muted); font-size:14px; }
+.pills { display:flex; gap:10px; flex-wrap:wrap; }
+.pill { border:1px solid rgba(189,208,222,.22); background:rgba(9,18,27,.48); color:#dbeaf6; padding:8px 12px; border-radius:999px; font-size:13px; }
+
+.grid { display:grid; grid-template-columns:420px 1fr; gap:18px; }
+.panel {
+  background:var(--panel); border:1px solid rgba(189,208,222,.14);
+  border-radius:24px; overflow:hidden; box-shadow:0 16px 40px rgba(0,0,0,.25); backdrop-filter:blur(8px);
+}
+.panel h2 { margin:0; padding:18px 20px; font-size:18px; border-bottom:1px solid rgba(189,208,222,.12); }
+.body { padding:18px 20px; }
+textarea, input[type="text"] {
+  width:100%; background:#061018; color:var(--text); border:1px solid var(--line);
+  border-radius:16px; padding:12px 14px; font-size:15px;
+}
+textarea { min-height:260px; resize:vertical; line-height:1.45; }
+.row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.row + .row { margin-top:12px; }
+label { font-size:14px; color:#d8e7f5; }
+input[type="range"] { width:180px; }
+
+.btn {
+  border:none; cursor:pointer; color:white; padding:12px 16px; border-radius:14px;
+  font-weight:800; font-size:14px; transition:transform .08s ease, filter .2s ease;
+}
+.btn:hover { filter:brightness(1.06); }
+.btn:active { transform:translateY(1px); }
+.primary { background:linear-gradient(135deg,#0ea5e9,#38bdf8); }
+.green { background:linear-gradient(135deg,#16a34a,#22c55e); }
+.purple { background:linear-gradient(135deg,#7c3aed,#a855f7); }
+.gray { background:#334155; }
+.warn { background:linear-gradient(135deg,#d97706,#f59e0b); }
+
+.stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:16px; }
+.stat { background:#061018; border:1px solid var(--line); border-radius:18px; padding:14px; }
+.stat .k { font-size:12px; color:var(--muted); }
+.stat .v { font-size:24px; font-weight:900; margin-top:6px; }
+.hr { height:1px; background:rgba(189,208,222,.12); margin:16px 0; }
+.mini { font-size:12px; color:var(--muted); }
+
+.stage {
+  position:relative; min-height:560px; border-radius:28px; overflow:hidden;
+  background:radial-gradient(circle at center, rgba(63,184,255,.12), transparent 40%), linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)), #061018;
+  border:1px solid rgba(189,208,222,.14);
+}
+.stage-head { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:18px 20px 12px 20px; }
+.badge {
+  font-size:13px; color:#dff4ff; border:1px solid rgba(63,184,255,.35);
+  background:rgba(14,165,233,.13); border-radius:999px; padding:8px 12px;
+}
+.screen {
+  position:relative; height:360px; margin:0 20px; border-radius:28px; overflow:hidden;
+  border:1px solid rgba(255,255,255,.08); background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01)), #08131d;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03), 0 10px 30px rgba(0,0,0,.25);
+}
+.mask-top, .mask-bottom { position:absolute; left:0; right:0; height:34%; z-index:2; pointer-events:none; }
+.mask-top { top:0; background:linear-gradient(180deg, rgba(6,16,24,.98), rgba(6,16,24,.65), rgba(6,16,24,0)); }
+.mask-bottom { bottom:0; background:linear-gradient(0deg, rgba(6,16,24,.98), rgba(6,16,24,.65), rgba(6,16,24,0)); }
+.center-line {
+  position:absolute; left:18px; right:18px; top:50%; height:90px; transform:translateY(-50%);
+  z-index:3; border-radius:20px; border:2px solid rgba(255,209,102,.82);
+  box-shadow:0 0 0 2px rgba(255,209,102,.14), 0 0 34px rgba(255,209,102,.10), inset 0 0 24px rgba(255,209,102,.06);
+  background:linear-gradient(180deg, rgba(255,209,102,.05), rgba(255,209,102,.02));
+}
+.ticker { position:absolute; left:0; right:0; top:0; z-index:1; will-change:transform; }
+.ticker-item {
+  height:90px; display:flex; align-items:center; justify-content:center;
+  font-weight:900; font-size:clamp(44px,5.6vw,88px); letter-spacing:.04em;
+  color:#f4fbff; text-shadow:0 0 10px rgba(63,184,255,.1); user-select:none; line-height:1;
+}
+.ticker-item.dim { opacity:.18; }
+.ticker-item.mid { opacity:.42; }
+.ticker-item.hit { opacity:1; color:#ffffff; text-shadow:none; transform:translateY(-1px); }
+
+.controls { display:flex; gap:10px; flex-wrap:wrap; padding:18px 20px 8px 20px; }
+.hint { padding:0 20px 18px 20px; color:var(--muted); font-size:14px; }
+.flash { animation:flash .7s ease 1; }
+@keyframes flash {
+  0% { filter:brightness(1.2); }
+  25% { filter:brightness(1.8); }
+  100% { filter:brightness(1); }
+}
+.winner-list { max-height:280px; overflow:auto; padding-right:6px; }
+.winner-item {
+  display:flex; justify-content:space-between; align-items:center; gap:8px;
+  padding:10px 12px; background:#061018; border:1px solid var(--line);
+  border-radius:14px; margin-bottom:8px; font-size:15px;
+}
+.winner-rank { color:var(--gold); font-weight:900; min-width:46px; }
+.winner-no { font-weight:900; font-size:18px; flex:1; text-align:right; }
+#confetti { position:fixed; inset:0; pointer-events:none; z-index:9999; }
+.hotkeys {
+  font-size:13px; color:#d8e7f5; line-height:1.7; background:#061018;
+  border:1px dashed #496882; border-radius:16px; padding:12px 14px;
+}
+@media (max-width:1080px) {
+  .grid { grid-template-columns:1fr; }
+  .brand h1 { font-size:26px; }
+  .screen { height:320px; }
+}
+
+.winner-highlight {
+  animation: winnerPop 1s ease-out forwards;
+}
+@keyframes winnerPop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.6); }
+  60% { transform: scale(1.2); }
+  100% { transform: scale(1.4); }
+}
+
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark" aria-label="Lucky Draw logo">🎉</div>
+      <div>
+        <h1>Event Lucky Draw</h1>
+        <p>Reusable open-source lucky draw web app</p>
+      </div>
+    </div>
+    <div class="pills">
+      <div class="pill">버튼 정상 동작</div>
+      <div class="pill">자연스러운 감속</div>
+      <div class="pill">축하 멜로디</div>
+      <div class="pill">큰 폭죽</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>참가 번호 입력</h2>
+      <div class="body">
+        <textarea id="numbersInput" placeholder="한 줄에 하나씩 번호를 넣어주세요.
+예시)
+10482
+7821
+CT-145
+99012"></textarea>
+
+        <div class="row">
+          <button class="btn primary" id="sampleBtn" type="button">샘플 400개 불러오기</button>
+          <button class="btn gray" id="shuffleBtn" type="button">목록 섞기</button>
+          <button class="btn warn" id="dedupeBtn" type="button">중복 정리</button>
+          <button class="btn gray" id="loadFileBtn" type="button">파일 불러오기</button>
+          <input type="file" id="fileInput" accept=".txt,.csv" style="display:none">
+        </div>
+
+        <div class="hr"></div>
+
+        <div class="row">
+          <label for="speedRange">기본 속도</label>
+          <input id="speedRange" type="range" min="45" max="130" value="65">
+          <span id="speedLabel">65ms</span>
+        </div>
+
+        <div class="row">
+          <label for="durationRange">회전 시간</label>
+          <input id="durationRange" type="range" min="2" max="8" value="4">
+          <span id="durationLabel">4초</span>
+        </div>
+
+        <div class="row">
+          <label for="titleInput">화면 문구</label>
+          <input id="titleInput" type="text" value="Event Lucky Draw 경품 추첨">
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="k">전체 참가 수</div><div class="v" id="totalCount">0</div></div>
+          <div class="stat"><div class="k">남은 번호</div><div class="v" id="remainCount">0</div></div>
+          <div class="stat"><div class="k">당첨자 수</div><div class="v" id="winnerCount">0</div></div>
+        </div>
+
+        <div class="hr"></div>
+        <div class="hotkeys">
+          <strong>빠른 키</strong><br>
+          스페이스바: 추첨 시작<br>
+          Enter: 당첨 확정<br>
+          Backspace: 직전 당첨 취소
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>추첨 화면</h2>
+      <div class="body">
+        <div class="stage" id="stage">
+          <div class="stage-head">
+            <div class="badge" id="eventTitle">Event Lucky Draw 경품 추첨</div>
+            <button class="btn gray" id="fullscreenBtn" type="button">전체화면</button>
+          </div>
+
+          <div class="screen" id="screen">
+            <div class="mask-top"></div>
+            <div class="mask-bottom"></div>
+            <div class="center-line"></div>
+            <div class="ticker" id="ticker"></div>
+          </div>
+
+          <div class="controls">
+            <button class="btn green" id="drawBtn" type="button">추첨 시작</button>
+            <button class="btn purple" id="confirmBtn" type="button">당첨 확정</button>
+            <button class="btn gray" id="undoBtn" type="button">직전 취소</button>
+            <button class="btn gray" id="saveWinnersBtn" type="button">당첨자 저장</button>
+            <button class="btn gray" id="saveRemainBtn" type="button">남은 번호 저장</button>
+          </div>
+          <div class="hint" id="hintText">버튼 한 번으로 아래로 흐르며 돌다가 천천히 멈춥니다.</div>
+        </div>
+
+        <div class="hr"></div>
+        <h2 style="padding:0 0 14px 0; border:0;">당첨자 목록</h2>
+        <div class="winner-list" id="winnerList"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const ITEM_HEIGHT = 90;
+  const VISIBLE_COUNT = 15;
+  const CENTER_INDEX = Math.floor(VISIBLE_COUNT / 2);
+
+  const numbersInput = $("numbersInput");
+  const fileInput = $("fileInput");
+  const sampleBtn = $("sampleBtn");
+  const shuffleBtn = $("shuffleBtn");
+  const dedupeBtn = $("dedupeBtn");
+  const loadFileBtn = $("loadFileBtn");
+  const speedRange = $("speedRange");
+  const durationRange = $("durationRange");
+  const speedLabel = $("speedLabel");
+  const durationLabel = $("durationLabel");
+  const titleInput = $("titleInput");
+  const eventTitle = $("eventTitle");
+  const totalCount = $("totalCount");
+  const remainCount = $("remainCount");
+  const winnerCount = $("winnerCount");
+  const ticker = $("ticker");
+  const hintText = $("hintText");
+  const stage = $("stage");
+  const drawBtn = $("drawBtn");
+  const confirmBtn = $("confirmBtn");
+  const undoBtn = $("undoBtn");
+  const saveWinnersBtn = $("saveWinnersBtn");
+  const saveRemainBtn = $("saveRemainBtn");
+  const winnerList = $("winnerList");
+  const fullscreenBtn = $("fullscreenBtn");
+  const screen = $("screen");
+  const canvas = $("confetti");
+  const ctx = canvas.getContext("2d");
+
+  let allNumbers = [];
+  let pool = [];
+  let winners = [];
+  let currentWinner = "";
+  let track = [];
+  let rolling = false;
+  let stopping = false;
+  let stopSequence = [];
+  let finalTarget = "";
+  let currentOffset = 0;
+  let stepToken = 0;
+  let audioCtx = null;
+  let confettiFrame = 0;
+  let confettiTimeouts = [];
+  let particles = [];
+
+  function parseInput(text) {
+    return text.split(/\r?\n|,|;/).map(v => v.trim()).filter(Boolean);
+  }
+  function uniq(arr) {
+    const seen = new Set();
+    const out = [];
+    for (const v of arr) if (!seen.has(v)) { seen.add(v); out.push(v); }
+    return out;
+  }
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+  function esc(str) {
+    return String(str).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+  }
+
+  function updateCounts() {
+    totalCount.textContent = allNumbers.length.toLocaleString();
+    remainCount.textContent = pool.length.toLocaleString();
+    winnerCount.textContent = winners.length.toLocaleString();
+  }
+  function updateTitle() {
+    eventTitle.textContent = titleInput.value.trim() || "경품 추첨";
+  }
+  function renderWinners() {
+    if (!winners.length) {
+      winnerList.innerHTML = '<div class="mini">아직 당첨자가 없습니다.</div>';
+      return;
+    }
+    winnerList.innerHTML = winners.map((w,i)=>`<div class="winner-item"><div class="winner-rank">${i+1}등</div><div class="winner-no">${esc(w)}</div></div>`).join("");
+  }
+
+  function buildIdleTrack() {
+    const source = pool.length ? pool : ["READY"];
+    track = [];
+    for (let i=0;i<VISIBLE_COUNT;i++) track.push(source[i % source.length]);
+    currentOffset = 0;
+    renderTicker();
+  }
+
+  function renderTicker() {
+    ticker.innerHTML = track.map((v, idx) => {
+      const cls = idx === CENTER_INDEX ? "ticker-item hit" : (Math.abs(idx - CENTER_INDEX) <= 1 ? "ticker-item mid" : "ticker-item dim");
+      return `<div class="${cls}">${esc(v)}</div>`;
+    }).join("");
+    const baseOffset = screen.clientHeight / 2 - ITEM_HEIGHT / 2 - CENTER_INDEX * ITEM_HEIGHT;
+    ticker.style.transform = `translateY(${baseOffset + currentOffset}px)`;
+  }
+
+  function syncFromTextarea() {
+    allNumbers = uniq(parseInput(numbersInput.value));
+    pool = [...allNumbers];
+    winners = [];
+    currentWinner = "";
+    rolling = false;
+    stopping = false;
+    stopSequence = [];
+    finalTarget = "";
+    stepToken++;
+    updateCounts();
+    renderWinners();
+    buildIdleTrack();
+  }
+
+  function randomPoolValue(exclude="") {
+    if (!pool.length) return "-";
+    if (pool.length === 1) return pool[0];
+    let v = pool[Math.floor(Math.random() * pool.length)];
+    if (exclude && v === exclude) {
+      for (let i=0;i<6 && v===exclude;i++) v = pool[Math.floor(Math.random() * pool.length)];
+    }
+    return v;
+  }
+
+  function prepareStopSequence(target) {
+    const seq = [];
+    const fillerCount = 8;
+    for (let i=0;i<fillerCount;i++) seq.push(randomPoolValue(target));
+    // inserted at top; reaches center after CENTER_INDEX steps
+    for (let i=0;i<CENTER_INDEX-1;i++) seq.push(randomPoolValue(target));
+    seq.push(target);
+    return seq;
+  }
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      audioCtx = new AC();
+    }
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+
+  function playTick(volume=0.06, pitch=1450) {
+    const ac = ensureAudio();
+    if (!ac) return;
+    const now = ac.currentTime;
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    const filter = ac.createBiquadFilter();
+    osc.type = "square";
+    osc.frequency.setValueAtTime(pitch, now);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(850, pitch*0.7), now + 0.018);
+    filter.type = "highpass";
+    filter.frequency.value = 1100;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(volume, now + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.03);
+    osc.connect(filter); filter.connect(gain); gain.connect(ac.destination);
+    osc.start(now); osc.stop(now + 0.035);
+  }
+
+  function playWinSound() {
+    const ac = ensureAudio();
+    if (!ac) return;
+    const now = ac.currentTime;
+    const totalDuration = 10.8;
+    const master = ac.createGain();
+    master.gain.value = 0.0001;
+    master.connect(ac.destination);
+    master.gain.exponentialRampToValueAtTime(0.5, now + 0.03);
+    master.gain.exponentialRampToValueAtTime(0.42, now + 1.2);
+    master.gain.exponentialRampToValueAtTime(0.0001, now + totalDuration);
+
+    function scheduleTrumpetNote(start, freq, dur, volume=0.22) {
+      const osc1 = ac.createOscillator();
+      const osc2 = ac.createOscillator();
+      const gain = ac.createGain();
+      const filter = ac.createBiquadFilter();
+
+      osc1.type = "sawtooth";
+      osc2.type = "square";
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(2400, now + start);
+      filter.Q.value = 8;
+
+      osc1.frequency.setValueAtTime(freq, now + start);
+      osc2.frequency.setValueAtTime(freq * 2, now + start);
+
+      gain.gain.setValueAtTime(0.0001, now + start);
+      gain.gain.exponentialRampToValueAtTime(volume, now + start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(volume * 0.7, now + start + Math.max(0.05, dur - 0.08));
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+
+      osc1.connect(filter);
+      osc2.connect(filter);
+      filter.connect(gain);
+      gain.connect(master);
+
+      osc1.start(now + start); osc1.stop(now + start + dur + 0.05);
+      osc2.start(now + start); osc2.stop(now + start + dur + 0.05);
+    }
+
+    function scheduleLeadNote(start, freq, dur, volume=0.2) {
+      const o1 = ac.createOscillator();
+      const o2 = ac.createOscillator();
+      const g = ac.createGain();
+      const filter = ac.createBiquadFilter();
+      const vibrato = ac.createOscillator();
+      const vibratoGain = ac.createGain();
+
+      o1.type = "triangle";
+      o2.type = "sine";
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(2600, now + start);
+      filter.Q.value = 5;
+      vibrato.type = "sine";
+
+      o1.frequency.setValueAtTime(freq, now + start);
+      o2.frequency.setValueAtTime(freq * 2, now + start);
+      vibrato.frequency.setValueAtTime(5.4, now + start);
+      vibratoGain.gain.setValueAtTime(5.5, now + start);
+      vibrato.connect(vibratoGain);
+      vibratoGain.connect(o1.frequency);
+
+      g.gain.setValueAtTime(0.0001, now + start);
+      g.gain.exponentialRampToValueAtTime(volume, now + start + 0.03);
+      g.gain.exponentialRampToValueAtTime(volume * 0.58, now + start + Math.max(0.08, dur - 0.12));
+      g.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+
+      o1.connect(filter);
+      o2.connect(filter);
+      filter.connect(g);
+      g.connect(master);
+
+      o1.start(now + start); o1.stop(now + start + dur + 0.06);
+      o2.start(now + start); o2.stop(now + start + dur + 0.06);
+      vibrato.start(now + start); vibrato.stop(now + start + dur + 0.06);
+    }
+
+    function scheduleApplauseBurst(start, dur=0.26, volume=0.9) {
+      const bufferSize = Math.max(1, Math.floor(ac.sampleRate * dur));
+      const buffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        const p = i / bufferSize;
+        const envelope = Math.pow(1 - p, 1.2);
+        data[i] = (Math.random() * 2 - 1) * envelope;
+      }
+
+      const source = ac.createBufferSource();
+      const band = ac.createBiquadFilter();
+      const high = ac.createBiquadFilter();
+      const g = ac.createGain();
+      source.buffer = buffer;
+      band.type = "bandpass";
+      band.frequency.setValueAtTime(1800 + Math.random() * 900, now + start);
+      band.Q.value = 0.8;
+      high.type = "highpass";
+      high.frequency.setValueAtTime(700, now + start);
+      g.gain.setValueAtTime(0.0001, now + start);
+      g.gain.exponentialRampToValueAtTime(volume, now + start + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + start + dur);
+
+      source.connect(band);
+      band.connect(high);
+      high.connect(g);
+      g.connect(master);
+      source.start(now + start);
+      source.stop(now + start + dur + 0.02);
+    }
+
+    const fanfare = [
+      {t:0.00, f:523.25, d:0.22},
+      {t:0.24, f:659.25, d:0.22},
+      {t:0.50, f:783.99, d:0.26},
+      {t:0.82, f:1046.50, d:0.54},
+      {t:1.44, f:783.99, d:0.22},
+      {t:1.70, f:1046.50, d:0.52}
+    ];
+    fanfare.forEach(n => scheduleTrumpetNote(n.t, n.f, n.d, n.f >= 1000 ? 0.32 : 0.24));
+
+    const melodyOffset = 2.1;
+    const melody = [
+      {t:0.00, f:392.00, d:0.32},
+      {t:0.38, f:392.00, d:0.20},
+      {t:0.64, f:440.00, d:0.44},
+      {t:1.14, f:392.00, d:0.44},
+      {t:1.64, f:523.25, d:0.44},
+      {t:2.14, f:493.88, d:0.74},
+      {t:3.02, f:392.00, d:0.32},
+      {t:3.40, f:392.00, d:0.20},
+      {t:3.66, f:440.00, d:0.44},
+      {t:4.16, f:392.00, d:0.44},
+      {t:4.66, f:587.33, d:0.44},
+      {t:5.16, f:523.25, d:0.86},
+      {t:6.18, f:659.25, d:0.28},
+      {t:6.50, f:587.33, d:0.28},
+      {t:6.82, f:523.25, d:0.34},
+      {t:7.20, f:659.25, d:0.34},
+      {t:7.58, f:783.99, d:0.42},
+      {t:8.06, f:698.46, d:0.40},
+      {t:8.52, f:659.25, d:0.74}
+    ];
+    melody.forEach(n => scheduleLeadNote(melodyOffset + n.t, n.f, n.d, n.t > 6 ? 0.22 : 0.19));
+
+    const applauseTimes = [0.18,0.34,0.50,0.72,0.92,1.10,1.34,1.58,1.86,2.18,2.46,2.76,3.04,3.32,3.62,3.90,4.18,4.46,4.76,5.04,5.34,5.62,5.92,6.22,6.48,6.74,7.04,7.32,7.58,7.88,8.16,8.46,8.74,9.06];
+    applauseTimes.forEach((t, i) => {
+      scheduleApplauseBurst(t, 0.16 + Math.random() * 0.14, i < 8 ? 1.05 : 0.92);
+      if (i % 3 === 0) scheduleApplauseBurst(t + 0.05, 0.12 + Math.random() * 0.12, 0.72);
+    });
+  }
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+
+  function addConfettiBurst(originX, originY, count=180, power=18, spread=Math.PI*2, baseAngle=-Math.PI/2) {
+    for (let i=0;i<count;i++) {
+      const angle = baseAngle + (Math.random() - 0.5) * spread;
+      const speed = Math.random() * power + power * 0.45;
+      particles.push({
+        x: originX + (Math.random() - 0.5) * 18,
+        y: originY + (Math.random() - 0.5) * 18,
+        vx: Math.cos(angle) * speed + (Math.random() - 0.5) * 6,
+        vy: Math.sin(angle) * speed - Math.random() * 4,
+        size: Math.random() * 16 + 10,
+        life: Math.random() * 130 + 110,
+        spin: (Math.random() - 0.5) * 0.42,
+        angle: Math.random() * Math.PI,
+        color: `hsl(${Math.random()*360},100%,62%)`
+      });
+    }
+  }
+
+  function launchConfetti() {
+    particles = [];
+    confettiTimeouts.forEach(t => clearTimeout(t));
+    confettiTimeouts = [];
+
+    const bursts = [
+      [canvas.width * 0.50, canvas.height * 0.52, 520, 24, 0, Math.PI * 2, -Math.PI/2],
+      [canvas.width * 0.15, canvas.height * 0.80, 320, 26, 80, Math.PI * 0.9, -Math.PI/3],
+      [canvas.width * 0.85, canvas.height * 0.80, 320, 26, 80, Math.PI * 0.9, -Math.PI * 2/3],
+      [canvas.width * 0.05, canvas.height * 0.55, 260, 24, 180, Math.PI * 0.75, 0],
+      [canvas.width * 0.95, canvas.height * 0.55, 260, 24, 180, Math.PI * 0.75, Math.PI],
+      [canvas.width * 0.30, canvas.height * 0.18, 240, 22, 260, Math.PI * 1.1, Math.PI/2],
+      [canvas.width * 0.70, canvas.height * 0.18, 240, 22, 260, Math.PI * 1.1, Math.PI/2],
+      [canvas.width * 0.50, canvas.height * 0.12, 340, 25, 360, Math.PI * 1.4, Math.PI/2],
+      [canvas.width * 0.22, canvas.height * 0.45, 240, 20, 480, Math.PI * 2, -Math.PI/2],
+      [canvas.width * 0.78, canvas.height * 0.45, 240, 20, 480, Math.PI * 2, -Math.PI/2],
+      [canvas.width * 0.10, canvas.height * 0.15, 180, 18, 620, Math.PI * 2, -Math.PI/2],
+      [canvas.width * 0.90, canvas.height * 0.15, 180, 18, 620, Math.PI * 2, -Math.PI/2]
+    ];
+
+    bursts.forEach(([x, y, count, power, delay, spread, baseAngle]) => {
+      const fire = () => addConfettiBurst(x, y, count, power, spread, baseAngle);
+      if (delay === 0) fire();
+      else confettiTimeouts.push(setTimeout(fire, delay));
+    });
+
+    confettiFrame++;
+    requestAnimationFrame(stepConfetti);
+  }
+  function stepConfetti() {
+    const frameToken = confettiFrame;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let alive = 0;
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.18;
+      p.vx *= 0.995;
+      p.angle += p.spin || 0;
+      p.life -= 1;
+      if (p.life > 0) {
+        alive++;
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, p.life/120);
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle || 0);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size/2, -p.size*0.35, p.size, p.size*0.7);
+        ctx.restore();
+      }
+    }
+    ctx.globalAlpha = 1;
+    if (alive && frameToken === confettiFrame) requestAnimationFrame(stepConfetti);
+  }
+
+  function animateOneStep(durationMs, onDone) {
+    const start = performance.now();
+    const token = stepToken;
+    function frame(now) {
+      if (token !== stepToken) return;
+      const p = Math.min(1, (now - start) / durationMs);
+      currentOffset = ITEM_HEIGHT * p; // downward
+      renderTicker();
+      if (p < 1) requestAnimationFrame(frame);
+      else {
+        currentOffset = 0;
+        onDone();
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function performStep(insertValue, durationMs, afterStep) {
+    playTick(Math.max(0.03, 0.09 - durationMs/2500), 1200 + Math.max(0, 120 - durationMs)*5);
+    animateOneStep(durationMs, () => {
+      track.pop();
+      track.unshift(insertValue); // appears at top, moves downward
+      renderTicker();
+      afterStep();
+    });
+  }
+
+  function finishStop() {
+    rolling = false;
+    stopping = false;
+    // 화면 중앙에 실제로 보이는 번호를 기준으로 확정값을 동기화
+    currentWinner = track[CENTER_INDEX] ?? finalTarget ?? "";
+    finalTarget = currentWinner;
+    stage.classList.remove("flash");
+    void stage.offsetWidth;
+    stage.classList.add("flash");
+    hintText.textContent = `멈췄습니다. 당첨 후보 번호: ${currentWinner} · 당첨 확정을 눌러주세요.`;
+    drawBtn.disabled = false;
+    playWinSound();
+    launchConfetti();
+  }
+
+  function scheduleStep(stepIndex, durations, insertValues) {
+    const token = stepToken;
+    if (stepIndex >= durations.length) {
+      if (token === stepToken) finishStop();
+      return;
+    }
+    performStep(insertValues[stepIndex], durations[stepIndex], () => {
+      if (token !== stepToken) return;
+      scheduleStep(stepIndex + 1, durations, insertValues);
+    });
+  }
+
+  function drawOnce() {
+    if (rolling) return;
+    const parsed = uniq(parseInput(numbersInput.value));
+    if (!parsed.length) {
+      alert("번호를 먼저 입력해주세요.");
+      return;
+    }
+    if (parsed.length !== allNumbers.length || pool.length + winners.length !== parsed.length) syncFromTextarea();
+    if (!pool.length) {
+      alert("남은 번호가 없습니다.");
+      return;
+    }
+
+    finalTarget = pool[Math.floor(Math.random() * pool.length)];
+    stopSequence = prepareStopSequence(finalTarget);
+
+    rolling = true;
+    stopping = false;
+    currentWinner = "";
+    drawBtn.disabled = true;
+    hintText.textContent = "빠르게 돌고 있습니다… 자동으로 서서히 감속합니다.";
+    stepToken++;
+    const token = stepToken;
+
+    const base = Number(speedRange.value); // ms per step
+    const spinMs = Number(durationRange.value) * 1000;
+    const fastSteps = Math.max(8, Math.round(spinMs / base));
+
+    const insertValues = [];
+    const durations = [];
+
+    for (let i=0;i<fastSteps;i++) {
+      insertValues.push(randomPoolValue());
+      durations.push(base);
+    }
+
+    // deceleration part with exact stop sequence
+    const decelSequence = [
+      ...stopSequence.slice(0, Math.max(0, stopSequence.length - 1)),
+      ...stopSequence.slice(Math.max(0, stopSequence.length - 4), Math.max(0, stopSequence.length - 1)),
+      ...stopSequence.slice(Math.max(0, stopSequence.length - 3), Math.max(0, stopSequence.length - 1)),
+      stopSequence[stopSequence.length - 1]
+    ];
+
+    const decelCount = decelSequence.length;
+    for (let i=0;i<decelCount;i++) {
+      const t = i / Math.max(1, decelCount - 1);
+      const dur = Math.round(base + 40 + t*t*260 + t*t*t*80);
+      insertValues.push(decelSequence[i]);
+      durations.push(dur);
+    }
+
+    scheduleStep(0, durations, insertValues);
+  }
+
+  function confirmWinner() {
+    if (rolling) {
+      alert("아직 추첨 중입니다. 멈춘 뒤 확정해주세요.");
+      return;
+    }
+    if (!currentWinner) {
+      alert("먼저 추첨을 시작해주세요.");
+      return;
+    }
+    const idx = pool.indexOf(currentWinner);
+    if (idx === -1) {
+      alert("이미 제외된 번호입니다.");
+      return;
+    }
+    pool.splice(idx,1);
+    winners.push(currentWinner);
+    currentWinner = "";
+    updateCounts();
+    renderWinners();
+    hintText.textContent = "당첨 확정 완료 🎉";
+    if (pool.length) buildIdleTrack();
+    else {
+      track = ["END"];
+      renderTicker();
+    }
+  }
+
+  function undoWinner() {
+    if (!winners.length) {
+      alert("취소할 당첨자가 없습니다.");
+      return;
+    }
+    const last = winners.pop();
+    pool.unshift(last);
+    updateCounts();
+    renderWinners();
+    buildIdleTrack();
+    hintText.textContent = `직전 당첨 취소: ${last}`;
+  }
+
+  function exportText(filename, lines) {
+    const blob = new Blob([lines.join("\n")], {type:"text/plain;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function sample400() {
+    const used = new Set();
+    const out = [];
+    while (out.length < 400) {
+      const v = Math.random() < 0.5 ? String(Math.floor(Math.random()*9000)+1000) : String(Math.floor(Math.random()*90000)+10000);
+      if (!used.has(v)) { used.add(v); out.push(v); }
+    }
+    numbersInput.value = out.join("\n");
+    syncFromTextarea();
+  }
+
+  async function loadFile(file) {
+    const text = await file.text();
+    let lines = parseInput(text);
+    if (lines.length && /^number$/i.test(lines[0])) lines = lines.slice(1);
+    numbersInput.value = lines.join("\n");
+    syncFromTextarea();
+  }
+
+  // events
+  sampleBtn.addEventListener("click", () => { try { sample400(); } catch(e) { alert("샘플 불러오기 오류: "+e.message); console.error(e); } });
+  shuffleBtn.addEventListener("click", () => { try { numbersInput.value = shuffle(uniq(parseInput(numbersInput.value))).join("\n"); syncFromTextarea(); } catch(e) { alert("목록 섞기 오류: "+e.message); } });
+  dedupeBtn.addEventListener("click", () => { try {
+    const before = parseInput(numbersInput.value);
+    const after = uniq(before);
+    numbersInput.value = after.join("\n");
+    syncFromTextarea();
+    alert(`중복 정리 완료: ${before.length - after.length}개 제거`);
+  } catch(e) { alert("중복 정리 오류: "+e.message); } });
+  loadFileBtn.addEventListener("click", () => fileInput.click());
+  fileInput.addEventListener("change", async (e) => {
+    try {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      await loadFile(file);
+      e.target.value = "";
+    } catch (err) {
+      alert("파일 불러오기 오류: " + err.message);
+      console.error(err);
+    }
+  });
+  speedRange.addEventListener("input", ()=> speedLabel.textContent = `${speedRange.value}ms`);
+  durationRange.addEventListener("input", ()=> durationLabel.textContent = `${durationRange.value}초`);
+  titleInput.addEventListener("input", updateTitle);
+  drawBtn.addEventListener("click", drawOnce);
+  confirmBtn.addEventListener("click", confirmWinner);
+  undoBtn.addEventListener("click", undoWinner);
+  fullscreenBtn.addEventListener("click", () => {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+    else document.exitFullscreen?.();
+  });
+  saveWinnersBtn.addEventListener("click", () => {
+    if (!winners.length) return alert("저장할 당첨자가 없습니다.");
+    exportText("당첨자목록.txt", winners.map((v,i)=>`${i+1}등\t${v}`));
+  });
+  saveRemainBtn.addEventListener("click", () => {
+    if (!pool.length) return alert("남은 번호가 없습니다.");
+    exportText("남은번호목록.txt", pool);
+  });
+  numbersInput.addEventListener("input", ()=> {
+    totalCount.textContent = uniq(parseInput(numbersInput.value)).length.toLocaleString();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (["TEXTAREA","INPUT"].includes(document.activeElement.tagName)) return;
+    if (e.code === "Space") { e.preventDefault(); drawOnce(); }
+    else if (e.key === "Enter") { e.preventDefault(); confirmWinner(); }
+    else if (e.key === "Backspace") { e.preventDefault(); undoWinner(); }
+  });
+
+  updateTitle();
+  speedLabel.textContent = `${speedRange.value}ms`;
+  durationLabel.textContent = `${durationRange.value}초`;
+  sample400();
+})();
+</script>
+
+<script>
+function highlightWinner() {
+  const el = document.getElementById('winnerName') || document.querySelector('.winner');
+  if (!el) return;
+  el.classList.remove('winner-highlight');
+  void el.offsetWidth;
+  el.classList.add('winner-highlight');
+}
+</script>
+
+</body>
+</html>
